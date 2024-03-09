@@ -1,6 +1,16 @@
-import { Controller, Get, Post, Body, Res } from '@nestjs/common';
+import {
+  Controller,
+  ValidationPipe,
+  Get,
+  Post,
+  Body,
+  Res,
+  Param,
+  Req,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { Response } from 'express';
+import { Response, Request } from 'express';
+import { RegistrationDto } from './dto/registration.dto';
 
 const ONE_MONTH = 30 * 24 * 60 * 60 * 1000;
 @Controller('auth')
@@ -8,7 +18,8 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
   @Post('/registration')
   async registration(
-    @Body() body: { email: string; password: string },
+    @Body(new ValidationPipe({ transform: true }))
+    body: RegistrationDto,
     @Res() response: Response,
   ) {
     const userData = await this.authService.registration(
@@ -26,18 +37,34 @@ export class AuthController {
   }
 
   @Post('/login')
-  login() {
-    return this.authService.login();
+  async login(
+    @Body(new ValidationPipe({ transform: true }))
+    body: RegistrationDto,
+    @Res() response: Response,
+  ) {
+    const userData = await this.authService.login(body.email, body.password);
+    response.cookie('refreshToken', userData.refreshToken, {
+      maxAge: ONE_MONTH,
+      httpOnly: true,
+    });
+
+    response.json(userData);
+
+    return userData;
   }
 
   @Post('/logout')
-  logout() {
-    return this.authService.logout();
+  async logout(@Req() request: Request, @Res() response: Response) {
+    const refreshToken = request.cookies['refreshToken'];
+    const token = await this.authService.logout(refreshToken);
+    response.clearCookie('refreshToken');
+
+    return token;
   }
 
   @Get('/activate/:link')
-  activate() {
-    return this.authService.activate();
+  activate(@Param('link') link: string) {
+    return this.authService.activate(link);
   }
 
   @Get('/refresh')

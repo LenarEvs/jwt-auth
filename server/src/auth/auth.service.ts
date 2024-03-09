@@ -1,9 +1,8 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { User } from './schemas/user.schema';
-import { Token } from './schemas/token.schema';
 import * as uuid from 'uuid';
 import { UserDto } from './dto/user.dto';
 import { TokenService } from './token/token.service';
@@ -14,7 +13,6 @@ const saltOrRounds = 10;
 export class AuthService {
   constructor(
     @InjectModel(User.name) private userModel: Model<User>,
-    @InjectModel(Token.name) private tokenModel: Model<Token>,
     private readonly tokenService: TokenService,
     private readonly mailService: MailService,
   ) {}
@@ -22,9 +20,8 @@ export class AuthService {
   async registration(email: string, password: string) {
     const candidate = await this.userModel.findOne({ email });
     if (candidate) {
-      throw new HttpException(
+      throw new BadRequestException(
         `Пользователь c email ${email} уже существует`,
-        HttpStatus.BAD_REQUEST,
       );
     }
     const hashPassword = await bcrypt.hash(password, saltOrRounds);
@@ -41,14 +38,31 @@ export class AuthService {
     await this.tokenService.saveToken(userDto.id, tokens.refreshToken);
     return { ...tokens, user: userDto };
   }
-  login() {
+  async login(email: string, password: string) {
+    const user = await this.userModel.findOne({ email });
+    if (!user) {
+      throw new BadRequestException(`Пользователь с такими данными не найден`);
+    }
+    const isPassEqual = await bcrypt.compare(password, user.password);
+
+    if (!isPassEqual) {
+      throw new BadRequestException(`Некорректный логин или пароль`);
+    }
+    const userDto = new UserDto(user);
+    const tokens = this.tokenService.generateToken({ ...userDto });
+    return { ...tokens, user: userDto };
+  }
+  async logout(refreshToken: string) {
     return { hello: '' };
   }
-  logout() {
-    return { hello: '' };
-  }
-  activate() {
-    return { hello: '' };
+  async activate(activationLink: string) {
+    const user = await this.userModel.findOne({ activationLink });
+    if (!user) {
+      throw new BadRequestException(`Некорректная ссылка активации`);
+    }
+
+    user.isActivated = true;
+    await user.save();
   }
   refresh() {
     return { hello: '' };
