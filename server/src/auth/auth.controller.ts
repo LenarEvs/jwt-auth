@@ -75,6 +75,27 @@ export class AuthController {
     response.json(nextTokens);
   }
 
+  @Post('/reset-password')
+  async resetPasswordRequest(@Body('email') email: string) {
+    await this.authService.resetPasswordRequest(email);
+    return {
+      message: 'Письмо для сброса пароля отправлено на указанный email',
+    };
+  }
+
+  @Get('/validate-password-link/:link')
+  async validatePasswordLink(@Param('link') link: string) {
+    return this.authService.validatePasswordLink(link);
+  }
+
+  @Post('/reset-password/:link')
+  async resetPassword(
+    @Param('link') link: string,
+    @Body('password') password: string,
+  ) {
+    return this.authService.resetPassword(link, password);
+  }
+
   @Get('/profile')
   async getProfileInfo(@Req() request: Request) {
     const accessToken = request.headers.authorization.split(' ')[1];

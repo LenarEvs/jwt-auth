@@ -24,4 +24,9 @@ export class MailService {
     //   html: `<div>${activationLink}</div>`,
     // });
   }
+  async sendResetPasswordMail(email: string, resetLink: string) {
+    console.log(email, resetLink);
+    // Здесь ваш код для отправки письма
+    // Вы можете использовать Nodemailer или любую другую библиотеку для отправки писем
+  }
 }

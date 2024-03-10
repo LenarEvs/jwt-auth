@@ -61,6 +61,7 @@ export class AuthService {
   async logout(refreshToken: string) {
     return this.tokenService.removeToken(refreshToken);
   }
+
   async activate(activationLink: string) {
     const user = await this.userModel.findOne({ activationLink });
     if (!user) {
@@ -86,6 +87,38 @@ export class AuthService {
     });
     return this.generateTokensResponse(user);
   }
+
+  async resetPasswordRequest(email: string) {
+    const user = await this.userModel.findOne({ email });
+    if (!user) {
+      throw new BadRequestException(`Пользователь с email ${email} не найден`);
+    }
+    const resetLink = uuid.v4(); // Генерация ссылки для сброса пароля
+    user.resetPasswordLink = resetLink;
+    await user.save();
+    await this.mailService.sendResetPasswordMail(email, resetLink);
+  }
+
+  async validatePasswordLink(resetPasswordLink: string) {
+    const user = await this.userModel.findOne({ resetPasswordLink });
+    if (!user) {
+      throw new BadRequestException(`Некорректная ссылка`);
+    }
+    return {
+      isSuccess: true,
+    };
+  }
+
+  async resetPassword(resetPasswordLink: string, password: string) {
+    const user = await this.userModel.findOne({ resetPasswordLink });
+    if (!user) {
+      throw new BadRequestException(`Некорректная ссылка`);
+    }
+    user.password = await bcrypt.hash(password, saltOrRounds);
+    user.resetPasswordLink = undefined;
+    return user.save();
+  }
+
   async getProfileInfo(accessToken: string) {
     const token = this.tokenService.validateAccessToken(accessToken);
     const { email, isActivated, id } = await this.userModel.findOne({
