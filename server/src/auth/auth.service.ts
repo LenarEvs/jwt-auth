@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
@@ -50,10 +54,11 @@ export class AuthService {
     }
     const userDto = new UserDto(user);
     const tokens = this.tokenService.generateToken({ ...userDto });
+    await this.tokenService.saveToken(userDto.id, tokens.refreshToken);
     return { ...tokens, user: userDto };
   }
   async logout(refreshToken: string) {
-    return { hello: '' };
+    return this.tokenService.removeToken(refreshToken);
   }
   async activate(activationLink: string) {
     const user = await this.userModel.findOne({ activationLink });
@@ -64,10 +69,32 @@ export class AuthService {
     user.isActivated = true;
     await user.save();
   }
-  refresh() {
-    return { hello: '' };
+  async refresh(refreshToken?: string) {
+    if (!refreshToken) {
+      throw new UnauthorizedException();
+    }
+    const userData = this.tokenService.validateRefreshToken(refreshToken);
+    const tokenFromDB = await this.tokenService.findToken(refreshToken);
+
+    if (!userData || tokenFromDB) {
+      throw new UnauthorizedException();
+    }
+
+    const user = await this.userModel.findOne({
+      email: tokenFromDB.user.email,
+    });
+    const userDto = new UserDto(user);
+    const tokens = this.tokenService.generateToken({ ...userDto });
+    await this.tokenService.saveToken(userDto.id, tokens.refreshToken);
+
+    return { ...tokens, user: userDto };
   }
-  getUsers() {
-    return ['user1', 'user2'];
+  async getProfileInfo(accessToken: string) {
+    const token = this.tokenService.validateAccessToken(accessToken);
+    const { email, isActivated, id } = await this.userModel.findOne({
+      email: token.email,
+    });
+
+    return { email, isActivated, id };
   }
 }

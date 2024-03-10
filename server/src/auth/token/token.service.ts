@@ -28,4 +28,29 @@ export class TokenService {
     }
     return await this.tokenModel.create({ user: userId, refreshToken });
   }
+
+  async findToken(refreshToken: string) {
+    const tokenData = await this.tokenModel.findOne({ refreshToken });
+    return tokenData;
+  }
+
+  async removeToken(refreshToken: string) {
+    const tokenData = await this.tokenModel.deleteOne({ refreshToken });
+    return tokenData;
+  }
+
+  validateAccessToken(token: string) {
+    try {
+      return jwt.verify(token, JWT_ACCESS_SECRET) as UserDto;
+    } catch (e) {
+      return null;
+    }
+  }
+  validateRefreshToken(token: string) {
+    try {
+      return jwt.verify(token, JWT_REFRESH_SECRET);
+    } catch (e) {
+      return null;
+    }
+  }
 }

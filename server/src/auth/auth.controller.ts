@@ -32,8 +32,6 @@ export class AuthController {
     });
 
     response.json(userData);
-
-    return userData;
   }
 
   @Post('/login')
@@ -49,17 +47,16 @@ export class AuthController {
     });
 
     response.json(userData);
-
-    return userData;
   }
 
   @Post('/logout')
   async logout(@Req() request: Request, @Res() response: Response) {
     const refreshToken = request.cookies['refreshToken'];
-    const token = await this.authService.logout(refreshToken);
+
+    await this.authService.logout(refreshToken);
     response.clearCookie('refreshToken');
 
-    return token;
+    response.json({ isSuccess: true });
   }
 
   @Get('/activate/:link')
@@ -68,12 +65,19 @@ export class AuthController {
   }
 
   @Get('/refresh')
-  refresh() {
-    return this.authService.refresh();
+  async refresh(@Req() request: Request, @Res() response: Response) {
+    const refreshToken = request.cookies['refreshToken'];
+    const nextTokens = await this.authService.refresh(refreshToken);
+    response.cookie('refreshToken', nextTokens, {
+      maxAge: ONE_MONTH,
+      httpOnly: true,
+    });
+    response.json(nextTokens);
   }
 
-  @Get('/users')
-  users() {
-    return this.authService.getUsers();
+  @Get('/profile')
+  async getProfileInfo(@Req() request: Request) {
+    const accessToken = request.headers.authorization.split(' ')[1];
+    return await this.authService.getProfileInfo(accessToken);
   }
 }
