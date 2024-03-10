@@ -4,17 +4,15 @@ import * as jwt from 'jsonwebtoken';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Token } from '../schemas/token.schema';
-const JWT_ACCESS_SECRET = 'jwt-access';
-const JWT_REFRESH_SECRET = 'jwt-refresh';
 
 @Injectable()
 export class TokenService {
   constructor(@InjectModel(Token.name) private tokenModel: Model<Token>) {}
   generateToken(payload: UserDto) {
-    const accessToken = jwt.sign(payload, JWT_ACCESS_SECRET, {
+    const accessToken = jwt.sign(payload, process.env.JWT_ACCESS_SECRET, {
       expiresIn: '30m',
     });
-    const refreshToken = jwt.sign(payload, JWT_REFRESH_SECRET, {
+    const refreshToken = jwt.sign(payload, process.env.JWT_REFRESH_SECRET, {
       expiresIn: '30d',
     });
     return { accessToken, refreshToken };
@@ -41,14 +39,14 @@ export class TokenService {
 
   validateAccessToken(token: string) {
     try {
-      return jwt.verify(token, JWT_ACCESS_SECRET) as UserDto;
+      return jwt.verify(token, process.env.JWT_ACCESS_SECRET) as UserDto;
     } catch (e) {
       return null;
     }
   }
   validateRefreshToken(token: string) {
     try {
-      return jwt.verify(token, JWT_REFRESH_SECRET);
+      return jwt.verify(token, process.env.JWT_REFRESH_SECRET);
     } catch (e) {
       return null;
     }
