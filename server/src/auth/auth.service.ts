@@ -6,7 +6,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
-import { User } from './schemas/user.schema';
+import { User, UserDocument } from './schemas/user.schema';
 import * as uuid from 'uuid';
 import { UserDto } from './dto/user.dto';
 import { TokenService } from './token/token.service';
@@ -20,6 +20,13 @@ export class AuthService {
     private readonly tokenService: TokenService,
     private readonly mailService: MailService,
   ) {}
+
+  async generateTokensResponse(user: UserDocument) {
+    const userDto = new UserDto(user);
+    const tokens = this.tokenService.generateToken({ ...userDto });
+    await this.tokenService.saveToken(userDto.id, tokens.refreshToken);
+    return { ...tokens, user: userDto };
+  }
 
   async registration(email: string, password: string) {
     const candidate = await this.userModel.findOne({ email });
@@ -37,10 +44,7 @@ export class AuthService {
     });
     await this.mailService.sendActivationMail(email, activationLink);
 
-    const userDto = new UserDto(user);
-    const tokens = this.tokenService.generateToken({ ...userDto });
-    await this.tokenService.saveToken(userDto.id, tokens.refreshToken);
-    return { ...tokens, user: userDto };
+    return this.generateTokensResponse(user);
   }
   async login(email: string, password: string) {
     const user = await this.userModel.findOne({ email });
@@ -52,10 +56,7 @@ export class AuthService {
     if (!isPassEqual) {
       throw new BadRequestException(`Некорректный логин или пароль`);
     }
-    const userDto = new UserDto(user);
-    const tokens = this.tokenService.generateToken({ ...userDto });
-    await this.tokenService.saveToken(userDto.id, tokens.refreshToken);
-    return { ...tokens, user: userDto };
+    return this.generateTokensResponse(user);
   }
   async logout(refreshToken: string) {
     return this.tokenService.removeToken(refreshToken);
@@ -83,11 +84,7 @@ export class AuthService {
     const user = await this.userModel.findOne({
       email: tokenFromDB.user.email,
     });
-    const userDto = new UserDto(user);
-    const tokens = this.tokenService.generateToken({ ...userDto });
-    await this.tokenService.saveToken(userDto.id, tokens.refreshToken);
-
-    return { ...tokens, user: userDto };
+    return this.generateTokensResponse(user);
   }
   async getProfileInfo(accessToken: string) {
     const token = this.tokenService.validateAccessToken(accessToken);
