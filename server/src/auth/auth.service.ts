@@ -11,6 +11,7 @@ import * as uuid from 'uuid';
 import { UserDto } from './dto/user.dto';
 import { TokenService } from './token/token.service';
 import { MailService } from './mail/mail.service';
+import { RegistrationDto } from './dto/registration.dto';
 
 const saltOrRounds = 10;
 @Injectable()
@@ -28,7 +29,8 @@ export class AuthService {
     return { ...tokens, user: userDto };
   }
 
-  async registration(email: string, password: string) {
+  async registration(createdUser: RegistrationDto) {
+    const { email, password, age, fullName } = createdUser;
     const candidate = await this.userModel.findOne({ email });
     if (candidate) {
       throw new BadRequestException(
@@ -39,6 +41,8 @@ export class AuthService {
     const activationLink = uuid.v4();
     const user = await this.userModel.create({
       email,
+      fullName,
+      age,
       password: hashPassword,
       activationLink,
     });
@@ -124,10 +128,11 @@ export class AuthService {
 
   async getProfileInfo(accessToken: string) {
     const token = this.tokenService.validateAccessToken(accessToken);
-    const { email, isActivated, id } = await this.userModel.findOne({
-      email: token.email,
-    });
+    const { email, age, fullName, isActivated, id } =
+      await this.userModel.findOne({
+        email: token.email,
+      });
 
-    return { email, isActivated, id };
+    return { email, age, fullName, isActivated, id };
   }
 }

@@ -11,6 +11,7 @@ import {
 import { AuthService } from './auth.service';
 import { Response, Request } from 'express';
 import { RegistrationDto } from './dto/registration.dto';
+import { LoginDto } from './dto/login.dto';
 
 const ONE_MONTH = 30 * 24 * 60 * 60 * 1000;
 @Controller('auth')
@@ -22,10 +23,7 @@ export class AuthController {
     body: RegistrationDto,
     @Res() response: Response,
   ) {
-    const userData = await this.authService.registration(
-      body.email,
-      body.password,
-    );
+    const userData = await this.authService.registration(body);
     response.cookie('refreshToken', userData.refreshToken, {
       maxAge: ONE_MONTH,
       httpOnly: true,
@@ -37,7 +35,7 @@ export class AuthController {
   @Post('/login')
   async login(
     @Body(new ValidationPipe({ transform: true }))
-    body: RegistrationDto,
+    body: LoginDto,
     @Res() response: Response,
   ) {
     const userData = await this.authService.login(body.email, body.password);
