@@ -11,7 +11,8 @@ export const ProfilePage = () => {
           <div className="card-body">
             <h2 className="card-title">Full Name: NNNNNNNNNN</h2>
             <h2 className="card-title">Age: NNNNNNNNNN</h2>
-            <h2 className="card-title mb-4">Email: NNNNNNNNNN</h2>
+            <h2 className="card-title">Email: NNNNNNNNNN</h2>
+            <h2 className="card-title mb-6">Activated: false</h2>
             <div className="card-actions justify-end">
               <button className="btn btn-primary w-full">Logout</button>
             </div>

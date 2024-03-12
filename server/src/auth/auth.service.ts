@@ -70,6 +70,7 @@ export class AuthService {
 
     user.isActivated = true;
     await user.save();
+    return { isSuccess: true };
   }
   async refresh(refreshToken?: string) {
     if (!refreshToken) {
@@ -116,7 +117,9 @@ export class AuthService {
     }
     user.password = await bcrypt.hash(password, saltOrRounds);
     user.resetPasswordLink = undefined;
-    return user.save();
+    await user.save();
+
+    return { isSuccess: true };
   }
 
   async getProfileInfo(accessToken: string) {
